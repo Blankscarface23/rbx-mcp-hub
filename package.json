@@ -1,0 +1,54 @@
+{
+  "name": "rbx-mcp-hub",
+  "version": "0.1.0",
+  "description": "Multi-place MCP hub for Roblox Studio. Route Claude Code, Cursor, and other MCP clients to specific Studio windows by PlaceId so you can work on multiple games at once.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "roblox",
+    "roblox-studio",
+    "claude",
+    "claude-code",
+    "cursor",
+    "ai",
+    "multi-place",
+    "multi-project",
+    "luau"
+  ],
+  "author": "Blankscarface23",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/bridge.js",
+  "bin": {
+    "rbx-mcp-hub": "bin/cli.js",
+    "rbx-mcp-bridge": "src/bridge.js",
+    "rbx-mcp-hubd": "src/hub.js"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "plugin/build/rbx-mcp-hub.rbxm",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start:hub": "node src/hub.js",
+    "start:bridge": "node src/bridge.js",
+    "build:plugin": "rojo build plugin/default.project.json -o plugin/build/rbx-mcp-hub.rbxm",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blankscarface23/rbx-mcp-hub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Blankscarface23/rbx-mcp-hub/issues"
+  },
+  "homepage": "https://github.com/Blankscarface23/rbx-mcp-hub#readme"
+}

@@ -1,0 +1,27 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+plugin/build/
+dist/
+*.rbxm
+*.rbxmx
+!plugin/build/.gitkeep
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+desktop.ini
+
+# Local state
+.rbx-mcp-hub-state/
+hub.log
+hub.pid
