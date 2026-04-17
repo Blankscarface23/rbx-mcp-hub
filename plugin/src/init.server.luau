@@ -8,16 +8,17 @@
 ]]
 
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
 
 local Config = require(script.Config)
 local Tools = require(script.Tools)
 
 local RUNNING = true
+local USER_ENABLED = true
+
 local TOOLBAR = plugin:CreateToolbar("rbx-mcp-hub")
 local BUTTON = TOOLBAR:CreateButton(
 	"Hub Status",
-	"rbx-mcp-hub: connection status",
+	"rbx-mcp-hub: click to toggle. Highlighted = connected.",
 	"rbxasset://textures/StudioToolbox/ClassIconFallback.png"
 )
 BUTTON.ClickableWhenViewportHidden = true
@@ -38,26 +39,34 @@ local function warnLog(msg)
 	warn(string.format("[%s] %s", Config.PLUGIN_NAME, msg))
 end
 
-local function updateButtonIcon()
-	if status.connected then
-		BUTTON.Icon = "rbxasset://textures/StudioToolbox/ClassIconFallback.png"
-	else
-		BUTTON.Icon = "rbxasset://textures/StudioToolbox/ClassIconFallback.png"
+local function refreshButton()
+	BUTTON:SetActive(USER_ENABLED and status.connected)
+end
+
+local function setConnected(connected, err)
+	local changed = status.connected ~= connected
+	status.connected = connected
+	status.lastError = err
+	refreshButton()
+	if changed then
+		if connected then
+			log("🟢 connected")
+		else
+			log(string.format("🔴 disconnected · %s", tostring(err)))
+		end
 	end
 end
 
-BUTTON.Click:Connect(function()
-	print(string.format(
-		"[%s v%s] PlaceId=%s Name=%s connected=%s commands=%d lastError=%s",
-		Config.PLUGIN_NAME,
-		Config.VERSION,
-		status.placeId,
-		status.placeName,
-		tostring(status.connected),
-		status.commandsServed,
-		tostring(status.lastError)
-	))
-end)
+local function syncPlaceId()
+	-- Re-read PlaceId on every poll so publish-while-open re-registers
+	-- under the new context instead of sticking on the stale one.
+	local current = tostring(game.PlaceId)
+	if current ~= status.placeId then
+		log(string.format("🔁 PlaceId %s → %s", status.placeId, current))
+		status.placeId = current
+		status.placeName = game.Name
+	end
+end
 
 local function hubUrl(path, query)
 	local base = string.format("http://%s:%d%s", Config.HUB_HOST, Config.HUB_PORT, path)
@@ -84,12 +93,13 @@ local function postResponse(id, result, err)
 		Body = body,
 	})
 	if not ok then
-		warnLog("failed to POST /response: " .. tostring(res))
+		warnLog("⚠️  /response failed: " .. tostring(res))
 	end
 end
 
 local function dispatch(cmd)
 	status.commandsServed += 1
+	log(string.format("🔧 %s", tostring(cmd.tool)))
 	local handler = Tools[cmd.tool]
 	if not handler then
 		return postResponse(cmd.id, nil, "unknown tool: " .. tostring(cmd.tool))
@@ -104,7 +114,26 @@ local function dispatch(cmd)
 	return postResponse(cmd.id, result, nil)
 end
 
+local function tryPing()
+	-- Non-blocking: /status returns instantly. Lets the toolbar reflect
+	-- hub reachability within ms, instead of waiting up to 15s for the
+	-- first /request long-poll to return.
+	local ok, res = pcall(HttpService.RequestAsync, HttpService, {
+		Url = hubUrl("/status"),
+		Method = "GET",
+		Headers = { ["Accept"] = "application/json" },
+	})
+	if ok and res.StatusCode == 200 then
+		setConnected(true, nil)
+		return true
+	end
+	local err = ok and string.format("HTTP %d", res.StatusCode) or tostring(res)
+	setConnected(false, err)
+	return false
+end
+
 local function pollOnce()
+	syncPlaceId()
 	local url = hubUrl("/request", {
 		context = status.placeId,
 		name = status.placeName,
@@ -116,17 +145,15 @@ local function pollOnce()
 	})
 
 	if not ok then
-		status.connected = false
-		status.lastError = tostring(res)
+		setConnected(false, tostring(res))
 		return false
 	end
 
 	if res.StatusCode == 200 then
-		status.connected = true
-		status.lastError = nil
+		setConnected(true, nil)
 		local decodeOk, cmd = pcall(HttpService.JSONDecode, HttpService, res.Body)
 		if not decodeOk or type(cmd) ~= "table" then
-			warnLog("invalid command payload: " .. tostring(res.Body):sub(1, 200))
+			warnLog("⚠️  bad payload: " .. tostring(res.Body):sub(1, 200))
 			return true
 		end
 		task.spawn(dispatch, cmd)
@@ -134,31 +161,47 @@ local function pollOnce()
 	end
 
 	if res.StatusCode == 423 or res.StatusCode == 204 then
-		status.connected = true
-		status.lastError = nil
+		setConnected(true, nil)
 		return true
 	end
 
-	status.connected = false
-	status.lastError = string.format("HTTP %d %s", res.StatusCode, res.StatusMessage or "")
+	setConnected(false, string.format("HTTP %d", res.StatusCode))
 	return false
 end
 
 local function pollLoop()
-	log(string.format("starting poll loop against %s:%d (PlaceId=%s)", Config.HUB_HOST, Config.HUB_PORT, status.placeId))
 	while RUNNING do
-		local ok = pollOnce()
-		if not ok then
-			task.wait(Config.RECONNECT_DELAY)
+		if USER_ENABLED then
+			local ok = pollOnce()
+			if not ok then
+				task.wait(Config.RECONNECT_DELAY)
+			end
+		else
+			task.wait(1)
 		end
-		updateButtonIcon()
 	end
-	log("poll loop stopped")
 end
+
+BUTTON.Click:Connect(function()
+	USER_ENABLED = not USER_ENABLED
+	if USER_ENABLED then
+		log("▶️  resumed")
+		tryPing()
+	else
+		log("⏸️  paused")
+		status.connected = false
+		status.lastError = "paused"
+		refreshButton()
+	end
+end)
 
 plugin.Unloading:Connect(function()
 	RUNNING = false
 end)
 
+log(string.format(
+	"🔌 v%s · PlaceId=%s · Name=%s · hub %s:%d",
+	Config.VERSION, status.placeId, status.placeName, Config.HUB_HOST, Config.HUB_PORT
+))
+tryPing()
 task.spawn(pollLoop)
-log(string.format("v%s loaded. PlaceId=%s", Config.VERSION, status.placeId))
