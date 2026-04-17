@@ -16,10 +16,13 @@ local RUNNING = true
 local USER_ENABLED = true
 
 local TOOLBAR = plugin:CreateToolbar("rbx-mcp-hub")
+local ICON = Config.ICON_ASSET_ID
+	and ("rbxassetid://" .. tostring(Config.ICON_ASSET_ID))
+	or "rbxasset://textures/StudioToolbox/ClassIconFallback.png"
 local BUTTON = TOOLBAR:CreateButton(
 	"Hub Status",
 	"rbx-mcp-hub: click to toggle. Highlighted = connected.",
-	"rbxasset://textures/StudioToolbox/ClassIconFallback.png"
+	ICON
 )
 BUTTON.ClickableWhenViewportHidden = true
 

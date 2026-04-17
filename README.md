@@ -1,9 +1,14 @@
 # rbx-mcp-hub
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Blankscarface23/rbx-mcp-hub/master/assets/rbx-mcp-hub.png" alt="rbx-mcp-hub" width="180">
+</p>
+
 Free, MIT-licensed multi-place MCP hub for Roblox Studio.
-Route Claude Code, Cursor, or any other MCP client to the correct Studio
-window by PlaceId so you can work on multiple Roblox games at the same
-time, one Claude session per game, with no command-queue races.
+Route Claude Code, Cursor, Codex, or any other MCP-speaking AI agent to
+the correct Studio window by PlaceId so you can work on multiple Roblox
+games at the same time, one agent session per game, with no
+command-queue races.
 
 ## Why this exists
 
@@ -25,6 +30,15 @@ same HTTP protocol:
 
 The hub matches by context. Every Claude session is permanently wired to
 its game's PlaceId — no per-call switching, no races.
+
+## Works with any MCP client
+
+The bridge is a plain stdio MCP server — any client that supports
+stdio MCP can use it. That includes Claude Code, Cursor, Codex, Cline,
+and Continue. `rbx-mcp-hub init` writes a Claude-Code-flavored
+`.mcp.json`; for other clients, point your client's MCP config at
+`node <repo>/src/bridge.js` with `RBX_PLACE_ID` (and optionally
+`RBX_PLACE_NAME`) in the env.
 
 ## Architecture
 
@@ -195,6 +209,13 @@ permits.
   use with MCP clients you trust.
 - No authentication across localhost. Other processes on your machine
   can already read your files, so the threat model is local.
+
+## Support
+
+If this saves you time juggling multiple Studios, consider sponsoring
+development on [GitHub Sponsors](https://github.com/sponsors/Blankscarface23).
+The project stays free and MIT either way — sponsorship just helps keep
+the roadmap moving.
 
 ## License
 

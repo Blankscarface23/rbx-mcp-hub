@@ -50,5 +50,6 @@
   "bugs": {
     "url": "https://github.com/Blankscarface23/rbx-mcp-hub/issues"
   },
-  "homepage": "https://github.com/Blankscarface23/rbx-mcp-hub#readme"
+  "homepage": "https://github.com/Blankscarface23/rbx-mcp-hub#readme",
+  "funding": "https://github.com/sponsors/Blankscarface23"
 }
