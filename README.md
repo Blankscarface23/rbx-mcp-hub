@@ -41,10 +41,11 @@ Every Roblox Studio MCP server today (the official archived `studio-rust-mcp-ser
 ## Quick start
 
 ```bash
-# 1. Install
+# 1. Install the Node side
 npm install -g rbx-mcp-hub
 
-# 2. Install the Studio plugin (one time)
+# 2. Install the Studio plugin (one time — copies the shipped .rbxm to
+#    %LocalAppData%\Roblox\Plugins on Windows)
 rbx-mcp-hub install-plugin
 
 # 3. In each Roblox project directory, set up the per-project .mcp.json
@@ -58,6 +59,18 @@ rbx-mcp-hub start
 # 6. Open Claude Code in that project → bridge auto-connects
 # 7. Repeat steps 5-6 for as many projects as you want
 ```
+
+The plugin binary lives at `plugin/build/rbx-mcp-hub.rbxm` and is committed
+to the repo, so you can also skip npm entirely: download the .rbxm, drop it
+into your Plugins folder, then run the hub and bridge directly with Node.
+
+## Rebuilding the plugin (contributors only)
+
+Plugin source is under `plugin/src/`. Studio's built-in Script Sync works
+fine for iterating: open a blank place, enable Script Sync against
+`plugin/src/`, then use **Save as Local Plugin** to rebuild the .rbxm.
+Rojo also works if you prefer (`rojo build plugin/default.project.json
+-o plugin/build/rbx-mcp-hub.rbxm`) but is not required.
 
 ## Wire protocol
 
