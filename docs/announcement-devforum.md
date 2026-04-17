@@ -69,9 +69,7 @@ Claude B (Card Game proj.) ──►  bridge (RBX_PLACE_ID=5678) ──►│
 ## Install
 
 ```bash
-git clone https://github.com/Blankscarface23/rbx-mcp-hub.git
-cd rbx-mcp-hub
-npm install && npm link
+npm install -g rbx-mcp-hub
 rbx-mcp-hub install-plugin
 rbx-mcp-hub start
 ```

@@ -77,25 +77,18 @@ the repo.
 
 ## First-time install
 
-The npm package isn't published yet, so install from source:
-
 ```bash
-# 1. Clone
-git clone https://github.com/Blankscarface23/rbx-mcp-hub.git
-cd rbx-mcp-hub
+# 1. Install from npm
+npm install -g rbx-mcp-hub
 
-# 2. Install deps
-npm install
-
-# 3. Expose the CLI on your PATH
-npm link
-
-# 4. Copy the Studio plugin .rbxm into Roblox's Plugins folder
+# 2. Copy the Studio plugin .rbxm into Roblox's Plugins folder
 rbx-mcp-hub install-plugin
 
-# 5. Start the hub daemon (runs in background)
+# 3. Start the hub daemon (runs in background)
 rbx-mcp-hub start
 ```
+
+Prefer source? `git clone https://github.com/Blankscarface23/rbx-mcp-hub.git && cd rbx-mcp-hub && npm install && npm link` and continue from step 2.
 
 Keep the hub running — it's a long-lived singleton. Re-run
 `rbx-mcp-hub start` after reboots, or wire it into your OS's startup
