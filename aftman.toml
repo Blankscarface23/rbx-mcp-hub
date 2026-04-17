@@ -1,0 +1,5 @@
+# Tools managed by Aftman — run `aftman install` after cloning to
+# fetch them. Only needed for contributors rebuilding the plugin;
+# end users get the prebuilt .rbxm shipped in plugin/build/.
+[tools]
+rojo = "rojo-rbx/rojo@7.6.0"

@@ -7,9 +7,8 @@ return {
 	PLUGIN_NAME = "rbx-mcp-hub",
 	VERSION = "0.1.0",
 
-	-- Optional: Roblox asset id for the toolbar button icon.
-	-- Upload assets/rbx-mcp-hub.png via Studio's Asset Manager (or
-	-- the Creator Dashboard) to get an id, then paste the number here.
-	-- Leave nil to use the built-in fallback icon.
-	ICON_ASSET_ID = nil,
+	-- Roblox asset id for the toolbar button icon.
+	-- Source: assets/rbx-mcp-hub.png uploaded to Roblox's CDN.
+	-- Leave nil to fall back to the built-in placeholder icon.
+	ICON_ASSET_ID = 92391154062719,
 }
