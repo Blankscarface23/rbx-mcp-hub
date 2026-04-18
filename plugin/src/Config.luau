@@ -5,7 +5,7 @@ return {
 	RECONNECT_DELAY = 2,
 	CONSOLE_HISTORY_LIMIT = 500,
 	PLUGIN_NAME = "rbx-mcp-hub",
-	VERSION = "0.1.1",
+	VERSION = "0.1.2",
 
 	-- Roblox asset id for the toolbar button icon.
 	-- Source: assets/rbx-mcp-hub.png uploaded to Roblox's CDN.

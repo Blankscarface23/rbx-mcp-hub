@@ -235,25 +235,38 @@ JSON field names differ from the archived Rust server's
 are not cross-compatible. Commands carry a UUID so multiple in-flight
 calls can't mix up responses.
 
-## Tools (v0.1.1)
+## Tools (v0.1.2)
 
-- `run_code` — execute arbitrary Luau in the Edit DataModel
-- `insert_model` — insert a Creator Store model into workspace
-- `get_console_output` — read recent LogService lines
-- `get_studio_mode` — report Edit / Play / Run / Stopped
+- `run_code` — execute arbitrary Luau in the Edit DataModel. Returns
+  tagged output (`[OUTPUT]`, `[WARNING]`, `[RETURNED RESULTS]`,
+  `[COMPILE ERROR]`, `[UNEXPECTED ERROR]`). Deep-serializes complex
+  return values (userdata like `CFrame`/`Vector3`/`Instance`, cyclic
+  tables, mixed-key tables) via clone + stringify. Captures multi-value
+  returns (`return a, b, c`).
+- `insert_model` — accepts either `query` (free-form marketplace search
+  via `InsertService:GetFreeModels`; top match inserted) or `assetId`
+  (direct). Collapses loaded objects into a Model/Folder. `Model` roots
+  are pivoted to the point under the Studio camera's viewport center,
+  so inserts land where you're looking.
+- `get_console_output` — read recent `LogService` lines.
+- `get_studio_mode` — report Edit / Play / Run / Stopped.
 - `start_stop_play` — enter Play or Run mode, or stop the current
   session. Backed by `StudioTestService:ExecutePlayModeAsync` /
-  `ExecuteRunModeAsync`; Stop uses a cross-DataModel signal watched
-  by the plugin running in the play-mode Server DataModel.
+  `ExecuteRunModeAsync`; Stop uses a cross-DataModel signal watched by
+  the plugin running in the play-mode Server DataModel.
 - `run_script_in_play_mode` — one-shot test runner. Injects a wrapper
-  Script into ServerScriptService, enters Play mode, pcalls your code
-  on the play-mode Server, captures return value + LogService output,
-  calls `StudioTestService:EndTest` to stop, and returns the result.
-  Times out after `timeoutSeconds` (default 10).
+  Script into ServerScriptService, enters Play or Run mode (via
+  `mode: "play" | "run"`), pcalls your code on the play-mode Server,
+  captures return value + `LogService` output, calls
+  `StudioTestService:EndTest` to stop, and returns the result. Times
+  out after `timeoutSeconds` (default 10).
+
+All mutating tool calls are wrapped in
+`ChangeHistoryService:TryBeginRecording("rbx-mcp-hub:<tool>")` so
+Ctrl+Z in Studio cleanly reverses whatever an MCP client just did.
 
 Later versions will expand toward a 15+ tool surface (tree, get,
-editScript, etc.), client-side `run_script_in_play_mode`, and richer
-Studio control.
+editScript, etc.) and client-side `run_script_in_play_mode`.
 
 ## Security
 
