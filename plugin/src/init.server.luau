@@ -8,8 +8,25 @@
 ]]
 
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 local Config = require(script.Config)
+local Context = require(script.Context)
+Context.plugin = plugin
+
+-- Plugins load in every DataModel (Edit, play-mode Server, play-mode
+-- Client). In play-mode Server we just watch for a stop signal from
+-- Edit so we can end the play session via StudioTestService:EndTest().
+-- In play-mode Client we do nothing.
+if not RunService:IsEdit() then
+	if RunService:IsServer() then
+		local GameStopUtil = require(script.Utils.GameStopUtil)
+		task.spawn(GameStopUtil.monitorForStopPlay, plugin)
+	end
+	return
+end
+
+-- Edit DataModel: set up toolbar, long-poll the hub, dispatch tools.
 local Tools = require(script.Tools)
 
 local RUNNING = true

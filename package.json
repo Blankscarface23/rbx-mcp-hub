@@ -1,6 +1,6 @@
 {
   "name": "rbx-mcp-hub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-place MCP hub for Roblox Studio. Route Claude Code, Cursor, and other MCP clients to specific Studio windows by PlaceId so you can work on multiple games at once.",
   "keywords": [
     "mcp",

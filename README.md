@@ -94,6 +94,59 @@ Keep the hub running — it's a long-lived singleton. Re-run
 `rbx-mcp-hub start` after reboots, or wire it into your OS's startup
 manager.
 
+## Migrating from `studio-rust-mcp-server`
+
+If you previously installed the archived
+[`Roblox/studio-rust-mcp-server`](https://github.com/Roblox/studio-rust-mcp-server),
+its MCP server entry stays registered in your Claude Code config even
+after you switch to `rbx-mcp-hub`. Because you now have the
+`rbx-mcp-hub` Studio plugin installed (not the old server's companion
+plugin), the stale entry has no plugin to talk to and every tool call
+fails with:
+
+```
+error decoding response body
+```
+
+That phrase is the Rust `reqwest` library reporting it got an HTTP
+response it couldn't decode — in practice it means the old server's
+internal long-poll never received a plugin response. Clean it up:
+
+1. Find the stale entry. In each project where you used the old server:
+   ```bash
+   claude mcp list
+   ```
+   Look for an entry named `Roblox_Studio` (or similar) pointing at
+   something like `rbx-studio-mcp.exe` or `studio-rust-mcp-server`.
+
+2. Check its scope, then remove it. The archived installer typically
+   registers per-project (local scope):
+   ```bash
+   claude mcp get Roblox_Studio          # shows Scope: Local or User
+   claude mcp remove "Roblox_Studio" -s local
+   ```
+   Use `-s user` instead if the scope is `User`. Repeat for every
+   project that lists it.
+
+3. Delete the old plugin `.rbxm` from your Roblox plugins folder if it's
+   still there — otherwise it'll fight for the same port the next time
+   you launch Studio:
+   - Windows: `%LOCALAPPDATA%\Roblox\Plugins\`
+   - macOS / Linux: `~/Documents/Roblox/Plugins/`
+
+   Common filenames: `MCPStudioPlugin.rbxm`, `studio-rust-mcp-server.rbxm`.
+
+4. If your project's `.claude/settings.local.json` has permission grants
+   like `mcp__Roblox_Studio__run_code`, rename the prefix to
+   `mcp__rbx-mcp-hub__` so Claude doesn't re-prompt after the switch.
+
+5. (Optional) Delete the old binary itself (e.g.
+   `~/Downloads/rbx-studio-mcp.exe`) — it's no longer needed.
+
+Then continue with [Per-project setup](#per-project-setup). After you
+restart each Claude Code session, `claude mcp list` from the project
+should show only `rbx-mcp-hub` for Studio tooling.
+
 ## Per-project setup
 
 From inside each Roblox game project directory:
@@ -137,10 +190,10 @@ project folder — Claude will prompt to authorize the MCP server; accept.
 | --- | --- | --- |
 | `hub unreachable at 127.0.0.1:44755` in Claude Code | Hub daemon not running | `rbx-mcp-hub start` |
 | `no active plugin for context=<id>` | Studio isn't open on that place, plugin disabled, or `RBX_PLACE_ID` in `.mcp.json` doesn't match `game.PlaceId` | Open the correct place; enable `rbx-mcp-hub` in Plugins → Manage Plugins; double-check `.mcp.json` |
+| `error decoding response body` on every tool call | Stale MCP registration from the archived [`studio-rust-mcp-server`](https://github.com/Roblox/studio-rust-mcp-server) — its companion Studio plugin is no longer installed | See [Migrating from `studio-rust-mcp-server`](#migrating-from-studio-rust-mcp-server) |
 | `🔴 disconnected · ConnectionRefused` in Studio Output | Hub crashed or not started | `rbx-mcp-hub status`, restart if needed |
 | Two Studios both route to each other | Both places have `PlaceId = 0` (unpublished) | Only run one unpublished place at a time, or publish both |
 | Tool call goes to the wrong Studio anyway | Stale `RBX_PLACE_ID` (you published after `init`) | Edit `.mcp.json` with the real PlaceId and restart Claude Code; the plugin auto-re-registers when `game.PlaceId` changes |
-| `start_stop_play` / `run_script_in_play_mode` return "not implemented" | Known v0.1 limitation — Studio's public plugin API can't toggle Play mode | Use F5/F7/F8 manually for now |
 
 ## Alternatives
 
@@ -182,18 +235,25 @@ JSON field names differ from the archived Rust server's
 are not cross-compatible. Commands carry a UUID so multiple in-flight
 calls can't mix up responses.
 
-## Tools (v0.1)
+## Tools (v0.1.1)
 
 - `run_code` — execute arbitrary Luau in the Edit DataModel
 - `insert_model` — insert a Creator Store model into workspace
 - `get_console_output` — read recent LogService lines
 - `get_studio_mode` — report Edit / Play / Run / Stopped
-- `start_stop_play` — **stub**, Studio lacks a public plugin API for Play toggling
-- `run_script_in_play_mode` — **stub**, same reason
+- `start_stop_play` — enter Play or Run mode, or stop the current
+  session. Backed by `StudioTestService:ExecutePlayModeAsync` /
+  `ExecuteRunModeAsync`; Stop uses a cross-DataModel signal watched
+  by the plugin running in the play-mode Server DataModel.
+- `run_script_in_play_mode` — one-shot test runner. Injects a wrapper
+  Script into ServerScriptService, enters Play mode, pcalls your code
+  on the play-mode Server, captures return value + LogService output,
+  calls `StudioTestService:EndTest` to stop, and returns the result.
+  Times out after `timeoutSeconds` (default 10).
 
 Later versions will expand toward a 15+ tool surface (tree, get,
-editScript, etc.) and real Play-mode support if Studio's plugin API
-permits.
+editScript, etc.), client-side `run_script_in_play_mode`, and richer
+Studio control.
 
 ## Security
 
