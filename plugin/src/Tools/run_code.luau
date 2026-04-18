@@ -11,11 +11,16 @@
 	- `[UNEXPECTED ERROR] <msg>` if the chunk threw
 
 	Complex values are serialized recursively:
-	- `deepClone` handles cyclic tables via an identity cache.
 	- `serializeValue` replaces userdata (CFrame, Vector3, Instance, …)
 	  with `tostring(…)` and coerces mixed-key tables so JSONEncode
 	  can still handle them.
-	- Leaf tables get `JSONEncode`'d; primitives are `tostring`'d.
+	- Cycles are detected via a `seen` set tracking the current recursion
+	  path and replaced with a `"[CYCLE]"` marker — the archived server
+	  shipped this path with a deepClone-before-recurse ordering bug that
+	  stack-overflowed on `a.self = a`; we detect the cycle inline instead.
+	- Leaf tables get `JSONEncode`'d (via pcall — any still-unserializable
+	  table degrades to `"[UNSERIALIZABLE TABLE]"` rather than crashing);
+	  primitives are `tostring`'d.
 
 	`print` and `warn` are tee'd — they still go to Studio's Output
 	window as well as into the returned string, so the user can watch
@@ -41,17 +46,30 @@ local function getTableType(t)
 	return hasArray, hasAssoc
 end
 
-local function serializeValue(arg)
+-- serializeValue walks its argument and returns a JSON-safe replacement:
+-- - tables → new tables with recursively-serialized keys/values
+-- - userdata (CFrame, Vector3, Instance, …) → tostring
+-- - primitives → passed through
+-- Cycles are detected via a `seen` set tracking the current recursion path
+-- and replaced with a "[CYCLE]" marker. Siblings that share a reference
+-- (diamond DAG) visit the shared node twice — correct, just a bit of
+-- duplicate work, not a cycle.
+local function serializeValue(arg, seen)
 	if typeof(arg) == "table" then
+		if seen[arg] then
+			return "[CYCLE]"
+		end
+		seen[arg] = true
 		local _, isAssoc = getTableType(arg)
 		local out = {}
 		for key, value in pairs(arg) do
-			local newKey = serializeValue(key)
+			local newKey = serializeValue(key, seen)
 			if isAssoc then
 				newKey = tostring(newKey)
 			end
-			out[newKey] = serializeValue(value)
+			out[newKey] = serializeValue(value, seen)
 		end
+		seen[arg] = nil
 		return out
 	elseif type(arg) == "userdata" then
 		return tostring(arg) or "UNABLE_TO_SERIALIZE"
@@ -59,36 +77,16 @@ local function serializeValue(arg)
 	return arg
 end
 
-local function deepClone(t, cache)
-	local clone = {}
-	for key, value in pairs(t) do
-		local newKey = key
-		if typeof(key) == "table" then
-			if not cache[key] then
-				cache[key] = deepClone(key, cache)
-			end
-			newKey = cache[key]
-		end
-		local newValue = value
-		if typeof(value) == "table" then
-			if not cache[value] then
-				cache[value] = deepClone(value, cache)
-			end
-			newValue = cache[value]
-		end
-		clone[newKey] = newValue
-	end
-	return clone
-end
-
 local function toStrTable(packed)
-	local cloned = deepClone(packed, {})
 	local n = packed.n or #packed
 	local out = table.create(n)
 	for i = 1, n do
-		local s = serializeValue(cloned[i])
+		local s = serializeValue(packed[i], {})
 		if typeof(s) == "table" then
-			out[i] = HttpService:JSONEncode(s)
+			local ok, encoded = pcall(function()
+				return HttpService:JSONEncode(s)
+			end)
+			out[i] = if ok then encoded else "[UNSERIALIZABLE TABLE]"
 		elseif s == nil then
 			out[i] = "nil"
 		else

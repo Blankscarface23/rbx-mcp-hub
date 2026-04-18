@@ -235,7 +235,7 @@ JSON field names differ from the archived Rust server's
 are not cross-compatible. Commands carry a UUID so multiple in-flight
 calls can't mix up responses.
 
-## Tools (v0.1.2)
+## Tools (v0.1.3)
 
 - `run_code` — execute arbitrary Luau in the Edit DataModel. Returns
   tagged output (`[OUTPUT]`, `[WARNING]`, `[RETURNED RESULTS]`,
