@@ -17,16 +17,21 @@ export const TOOL_DEFINITIONS = [
   {
     name: "insert_model",
     description:
-      "Insert a model from the Roblox Creator Store into the target Studio session's workspace by asset id.",
+      "Insert a model from the Creator Store into the target Studio session's workspace. Provide either `query` (free-form marketplace search via InsertService:GetFreeModels; top match is inserted) or `assetId` (direct Creator Store id). Model roots are pivoted to the point under the Studio camera's viewport center so the model lands where the user is looking.",
     inputSchema: {
       type: "object",
       properties: {
+        query: {
+          type: "string",
+          description:
+            "Free-form marketplace search query. The top InsertService:GetFreeModels result is inserted. Mutually exclusive with assetId.",
+        },
         assetId: {
           type: ["string", "number"],
-          description: "Creator Store asset id.",
+          description:
+            "Creator Store asset id. Mutually exclusive with query.",
         },
       },
-      required: ["assetId"],
     },
   },
   {
