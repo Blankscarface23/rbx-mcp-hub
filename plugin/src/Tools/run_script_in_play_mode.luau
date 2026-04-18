@@ -5,12 +5,14 @@
 	2. Inject a wrapper Script into ServerScriptService. The wrapper pcalls
 	   the user's code, captures LogService output, and calls
 	   StudioTestService:EndTest() with a structured result.
-	3. Call StudioTestService:ExecutePlayModeAsync({}) which yields until
-	   the wrapper's EndTest runs. The EndTest payload flows back as the
-	   return value of ExecutePlayModeAsync.
+	3. Call StudioTestService:ExecutePlayModeAsync({}) for `mode="play"`
+	   (full Play Solo — client + server + character) or
+	   StudioTestService:ExecuteRunModeAsync({}) for `mode="run"`
+	   (server-only, no character spawning). Both yield until the wrapper's
+	   EndTest runs. The EndTest payload flows back as the return value.
 	4. Remove the injected Script.
 
-	Only side="server" is implemented in v0.1.1. Client-side is a TODO.
+	Only side="server" is implemented. Client-side injection is a TODO.
 
 	Pattern ported from Roblox/studio-rust-mcp-server (MIT).
 ]]
@@ -123,7 +125,12 @@ return function(params)
 
 	local side = params.side or "server"
 	if side ~= "server" then
-		return nil, "only side='server' is implemented in v0.1.1"
+		return nil, "only side='server' is implemented; client-side injection is a TODO"
+	end
+
+	local mode = params.mode or "play"
+	if mode ~= "play" and mode ~= "run" then
+		return nil, "param 'mode' must be 'play' or 'run' (default 'play')"
 	end
 
 	local timeoutSec = params.timeoutSeconds
@@ -146,17 +153,22 @@ return function(params)
 
 	local endTestPayload
 	local ok, err = pcall(function()
-		endTestPayload = StudioTestService:ExecutePlayModeAsync({})
+		if mode == "play" then
+			endTestPayload = StudioTestService:ExecutePlayModeAsync({})
+		else
+			endTestPayload = StudioTestService:ExecuteRunModeAsync({})
+		end
 	end)
 
 	removeExistingRunner()
 
 	if not ok then
-		return nil, "failed to run play mode: " .. tostring(err)
+		return nil, string.format("failed to run %s mode: %s", mode, tostring(err))
 	end
 
 	return {
 		action = "run_script_in_play_mode",
+		mode = mode,
 		result = endTestPayload,
 	}
 end
