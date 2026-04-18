@@ -69,17 +69,30 @@ export const TOOL_DEFINITIONS = [
   {
     name: "run_script_in_play_mode",
     description:
-      "Start Play mode, run the provided script, capture results, then stop. One-shot test runner.",
+      "Start Play or Run mode, inject the provided Luau as a Script into ServerScriptService, pcall it, capture logs + return value, stop, and return the structured result. One-shot test runner.",
     inputSchema: {
       type: "object",
       properties: {
-        code: { type: "string", description: "Luau to execute during playtest." },
+        code: { type: "string", description: "Luau to execute during the session." },
+        mode: {
+          type: "string",
+          enum: ["play", "run"],
+          default: "play",
+          description:
+            "'play' = StudioTestService:ExecutePlayModeAsync (Play Solo, client + server + character). 'run' = ExecuteRunModeAsync (server-only, no character spawning).",
+        },
         side: {
           type: "string",
           enum: ["client", "server"],
           default: "server",
+          description: "Only 'server' is implemented; client-side injection is a TODO.",
         },
-        timeoutSeconds: { type: "number", default: 10 },
+        timeoutSeconds: {
+          type: "number",
+          default: 10,
+          description:
+            "How long the injected runner waits for your code before force-ending the test. Note: the hub's per-command timeout is 60s, so values above ~50s will be cut off by the bridge.",
+        },
       },
       required: ["code"],
     },
