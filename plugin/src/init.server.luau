@@ -7,6 +7,7 @@
 	with its own PlaceId so the hub can route commands correctly.
 ]]
 
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
@@ -124,7 +125,16 @@ local function dispatch(cmd)
 	if not handler then
 		return postResponse(cmd.id, nil, "unknown tool: " .. tostring(cmd.tool))
 	end
+	-- Wrap the handler in a ChangeHistoryService recording so Studio's
+	-- Undo stack gets a single entry per MCP call. Matches the pattern
+	-- used by the archived Roblox/studio-rust-mcp-server. TryBeginRecording
+	-- returns nil if recording isn't permitted (e.g. another recording is
+	-- already in flight); in that case we just proceed unrecorded.
+	local recording = ChangeHistoryService:TryBeginRecording("rbx-mcp-hub:" .. tostring(cmd.tool))
 	local ok, result, err = pcall(handler, cmd.params or {})
+	if recording then
+		ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
+	end
 	if not ok then
 		return postResponse(cmd.id, nil, "handler crashed: " .. tostring(result))
 	end
